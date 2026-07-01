@@ -28,10 +28,15 @@ public class DoctorsController : ControllerBase // hereda de controlerbase
         if (string.IsNullOrWhiteSpace(request.LicenseNumber))
             throw new ValidationException("LicenseNumber", "La matrícula es requerida.");
 
-        var specialty = _persistence.GetSpecialtyById(request.SpecialityId);
+        var specialty = await _persistence.GetSpecialityById(request.SpecialityId);
 
-        var newDoctor = new Doctor(request.Name, request.LicenseNumber, specialty, Guid.NewGuid());
-        _persistence.AddDoctor(newDoctor);
+        if(specialty == null)
+        {
+            throw new ValidationException("SpecialityId", "La especialidad especificada no existe.");
+        }
+
+    var newDoctor = new Doctor(request.Name, request.LicenseNumber, specialty, Guid.NewGuid());
+        await _persistence.SaveDoctor(newDoctor);
 
         var response = new DoctorModel.Response(
             newDoctor.Id,
@@ -48,7 +53,7 @@ public class DoctorsController : ControllerBase // hereda de controlerbase
     [HttpGet] //Trae a todos los doctores activos
     public async Task<IActionResult> GetActiveDoctors()
     {
-        var activeDoctors = _persistence.GetActiveDoctors();
+        var activeDoctors = await _persistence.GetAllDoctors();
 
         var response = activeDoctors.Select(doctor => new DoctorModel.Response(
             doctor.Id,
@@ -66,8 +71,8 @@ public class DoctorsController : ControllerBase // hereda de controlerbase
     [HttpGet("{id:guid}")] //Trae a un doctor mediante su Id
     public async Task<IActionResult> GetDoctorById([FromRoute] Guid id)
     {
-        var doctor = _persistence.GetDoctorById(id);
-        string specialityName = doctor.Speciality?.Name ?? "Sin Especialidad.";
+        var doctor = await _persistence.GetDoctorById(id);
+        string specialityName = doctor.Speciality.Name ?? "Sin Especialidad.";
 
         return Ok(new
         {
@@ -82,7 +87,9 @@ public class DoctorsController : ControllerBase // hereda de controlerbase
     [HttpDelete("{id:guid}")] //Desactiva a un doctor
     public async Task<IActionResult> DeactivateDoctor([FromRoute] Guid id)
     {
-        _persistence.DeactivateDoctor(id);
+        var doctor = await _persistence.GetDoctorById(id);
+        doctor.Deactivate();
+        await _persistence.UpdateDoctor(doctor);
         return NoContent();
     }
     #endregion

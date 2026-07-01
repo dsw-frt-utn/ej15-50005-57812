@@ -1,7 +1,9 @@
-
+using Dsw2026Ej15.Api.Configurations;
 using Dsw2026Ej15.Api.ExceptionHandler;
 using Dsw2026Ej15.Data;
+using Dsw2026Ej15.Data.Extensions;
 using Dsw2026Ej15.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace Dsw2026Ej15
 {
@@ -12,10 +14,12 @@ namespace Dsw2026Ej15
             var builder = WebApplication.CreateBuilder(args);
 
             // Registro de Servicios
+            builder.Services.AddApplicationPersistence(builder.Configuration);
             builder.Services.AddControllers();
             builder.Services.AddSwaggerGen();
-            builder.Services.AddSingleton<IPersistence, PersistenceInMemory>();
             builder.Services.AddHealthChecks();
+            builder.Services.AddScoped<IPersistence, PersistenceEf>();
+
             var app = builder.Build();
 
             //Middleware
@@ -32,6 +36,11 @@ namespace Dsw2026Ej15
             app.UseAuthorization();
             app.MapHealthChecks("/health-check");
             app.MapControllers();
+
+            using var scope = app.Services.CreateScope();
+            var services = scope.ServiceProvider;
+            var context = services.GetRequiredService<Dsw2026Ej15DbContext>();
+            context.SeedworkSpecialities(@"specialities.json");
 
             app.Run();
         }
