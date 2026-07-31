@@ -2,6 +2,7 @@
 using Dsw2026Ej15.Api.ExceptionHandler;
 using Dsw2026Ej15.Data;
 using Dsw2026Ej15.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace Dsw2026Ej15
 {
@@ -14,7 +15,14 @@ namespace Dsw2026Ej15
             // Registro de Servicios
             builder.Services.AddControllers();
             builder.Services.AddSwaggerGen();
-            builder.Services.AddSingleton<IPersistence, PersistenceInMemory>();
+
+            // 1. Registro del DbContext con SQL Server
+            builder.Services.AddDbContext<AplicationDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            // 2. Inyección de la nueva persistencia EF (reemplazando a PersistenceInMemory)
+            builder.Services.AddScoped<IPersistence, PersistenceEf>();
+
             builder.Services.AddHealthChecks();
             var app = builder.Build();
 
